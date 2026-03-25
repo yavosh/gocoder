@@ -22,7 +22,7 @@ Two parallel tracks: cloud training starts immediately, local infrastructure is 
 gocoder/
 ├── CLAUDE.md
 ├── Makefile                          # Top-level orchestration
-├── pipeline/                         # Dataset pipeline (Go CLI)
+├── pipeline/                         # Dataset pipeline (Go CLI, invoked via `gocoder pipeline build`)
 │   ├── cmd/pipeline/main.go
 │   ├── internal/
 │   │   ├── collector/                # Clone repos, fetch articles
@@ -38,7 +38,7 @@ gocoder/
 │   ├── config/
 │   │   └── nemotron-cascade-2.yaml   # Training hyperparams
 │   └── requirements.txt
-├── eval/                             # Evaluation harness (Go + Python)
+├── eval/                             # Evaluation harness (Go + Python, invoked via `gocoder eval run`)
 │   ├── prompts/                      # Go coding prompts (YAML)
 │   ├── judge/                        # Scoring logic
 │   ├── cmd/eval/main.go              # Run eval suite against ollama API
@@ -92,6 +92,7 @@ repos:
   - url: https://github.com/etcd-io/etcd
   - url: https://github.com/charmbracelet/bubbletea
   - url: https://github.com/sqlc-dev/sqlc
+  - url: https://github.com/coredns/coredns
 
   # Personal repos (4-5)
   - url: https://github.com/yavosh/repo1
@@ -145,6 +146,8 @@ sources.yaml -> collect -> extract -> filter -> format -> train.jsonl + eval.jso
 - Weights in `sources.yaml` control oversampling
 - Pipeline is idempotent — deterministic hashing for dedup, fixed random seed for splits
 - Single command: `pipeline build`
+- **Dataset size target:** Minimum 10K examples to start training run 1, target 50K-100K for final runs
+- **FIM tokens:** Must be verified against Nemotron-Cascade-2's actual special tokens before formatting. If the model doesn't have FIM tokens in its vocabulary, they need to be added with embedding layer resize
 
 ## Training & Iteration Loop
 
@@ -152,9 +155,10 @@ sources.yaml -> collect -> extract -> filter -> format -> train.jsonl + eval.jso
 
 H100 80GB as primary (Vast.ai or RunPod), A100 80GB as fallback.
 
-- ~$5-10 per run (1.5-3 hours on H100)
+- ~$5-12 per run (2-4 hours on H100, varies with dataset size)
 - 8-14 runs total: ~$40-150
 - Starts immediately — no hardware dependency
+- **VRAM note:** 30B params in bf16 = ~60GB model weights. H100 80GB should fit with batch_size=4 and seq_len=4096, but may need to drop to batch_size=1-2 if OOM. LoRA adapters and optimizer states are small (~1-2GB)
 
 ### Training Config
 
@@ -168,6 +172,10 @@ model:
 lora:
   r: 16
   alpha: 16
+  # NOTE: These are placeholder targets for a standard transformer.
+  # MoE models have different layer names (e.g., experts.0.gate_proj).
+  # Run `model.named_modules()` on the loaded model to discover actual
+  # layer names before training. Unsloth may handle this automatically.
   target_modules:
     - q_proj
     - k_proj
@@ -197,6 +205,8 @@ dataset:
 
 Each run follows: adjust config/data -> train on cloud -> download adapter -> merge -> quantize -> eval -> compare.
 
+**Artifact versioning:** Tag each run's adapter, GGUF, and eval results with the run number (e.g., `run-05/`). Keep the best-known-good model tagged so you can roll back if a run regresses.
+
 | Run | Goal | Change | Decision Gate |
 |---|---|---|---|
 | 1 | Sanity check | Default config, full dataset | Loss converges? Any crashes? |
@@ -223,7 +233,7 @@ python training/convert_gguf.py --input /workspace/merged --output /workspace/go
 rsync -avP cloud:/workspace/go-nemotron-Q4_K_M.gguf models/
 
 # Eval
-eval run --model models/go-nemotron-Q4_K_M.gguf --baseline results/baseline.json
+gocoder eval run --model models/go-nemotron-Q4_K_M.gguf --baseline results/baseline.json
 ```
 
 ## Evaluation Harness
@@ -261,10 +271,10 @@ Go CLI that runs Go-specific coding prompts against any ollama-compatible API an
 ### Eval CLI
 
 ```bash
-eval run --model go-nemotron --output results/run-05.json
-eval run --endpoint http://cloud:11434 --model go-nemotron --output results/run-05.json
-eval compare --baseline results/baseline.json --candidate results/run-05.json
-eval judge --input results/run-05.json --judge claude-opus
+gocoder eval run --model go-nemotron --output results/run-05.json
+gocoder eval run --endpoint http://cloud:11434 --model go-nemotron --output results/run-05.json
+gocoder eval compare --baseline results/baseline.json --candidate results/run-05.json
+gocoder eval judge --input results/run-05.json --judge claude-opus
 ```
 
 ## Serving & Model Routing
@@ -309,6 +319,7 @@ routing:
 - Optional model preloading on startup
 - Health endpoint (`/health`) and Prometheus metrics (`/metrics`)
 - Localhost only, no auth
+- Router only depends on the OpenAI-compatible API subset (`/v1/*`), not ollama-specific APIs. This means it works with HF Inference Endpoints or any OpenAI-compatible backend without changes
 
 ### Modelfile
 
@@ -450,9 +461,9 @@ opencode                         <- terminal AI coding tool
 
 ## Deliverables
 
-1. **`pipeline`** — Go CLI. `pipeline build` produces train/eval JSONL from sources.yaml
+1. **`gocoder pipeline build`** — Go CLI. Produces train/eval JSONL from sources.yaml
 2. **`training/`** — Python scripts. Train, merge, convert, quantize. Config-driven
-3. **`eval`** — Go CLI. `eval run`, `eval compare`, `eval judge`. Automated + LLM-as-judge
+3. **`gocoder eval`** — Go CLI. `run`, `compare`, `judge` subcommands. Automated + LLM-as-judge
 4. **`gocoder serve`** — Go HTTP proxy. Routes to right ollama model. OpenAI-compatible
 5. **`go-nemotron`** — The fine-tuned model. GGUF on HF, Modelfile for ollama
 6. **opencode config** — Point and shoot. Local or remote, same interface
