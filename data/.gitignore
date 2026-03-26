@@ -1,0 +1,7 @@
+# Ignore everything
+*
+
+# Keep these config files
+!.gitignore
+!sources.yaml
+!bookmarks.txt
