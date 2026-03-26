@@ -36,17 +36,17 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  serve             Start model routing proxy")
 }
 
-func runPipeline(args []string) {
+func runPipeline(_ []string) {
 	fmt.Fprintln(os.Stderr, "pipeline: not implemented")
 	os.Exit(1)
 }
 
-func runEval(args []string) {
+func runEval(_ []string) {
 	fmt.Fprintln(os.Stderr, "eval: not implemented")
 	os.Exit(1)
 }
 
-func runServe(args []string) {
+func runServe(_ []string) {
 	fmt.Fprintln(os.Stderr, "serve: not implemented")
 	os.Exit(1)
 }
