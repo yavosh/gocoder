@@ -10,6 +10,20 @@ import (
 	"github.com/yavosh/gocoder/internal/config"
 )
 
+// ResolveRepo returns the local directory for a repo source.
+// For local dirs, it returns the path directly. For URLs, it clones to outputDir.
+func ResolveRepo(ctx context.Context, src config.RepoSource, outputDir string) (string, error) {
+	if src.IsLocal() {
+		dir := src.Dir
+		if src.Path != "" {
+			dir = filepath.Join(dir, src.Path)
+		}
+		return dir, nil
+	}
+
+	return CloneRepo(ctx, src, outputDir)
+}
+
 func CloneRepo(ctx context.Context, src config.RepoSource, outputDir string) (string, error) {
 	parts := strings.Split(strings.TrimSuffix(src.URL, "/"), "/")
 	name := parts[len(parts)-1]

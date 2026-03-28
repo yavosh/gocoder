@@ -7,21 +7,32 @@ repos:
   - url: https://github.com/prometheus/prometheus
   - url: https://github.com/hashicorp/consul
   - url: https://github.com/hashicorp/vault
-  - url: https://github.com/hashicorp/terraform
   - url: https://github.com/etcd-io/etcd
   - url: https://github.com/charmbracelet/bubbletea
   - url: https://github.com/sqlc-dev/sqlc
   - url: https://github.com/coredns/coredns
 
-  # Personal repos (update with actual URLs)
-  # - url: https://github.com/yavosh/repo1
+  # Personal repos — use dir: for local paths, url: for remote
+  # - dir: ~/Projects/yavosh/orcan
   #   weight: 2.0
+  # - dir: ~/Projects/yavosh/smtpbox
+  #   weight: 2.0
+  - url: https://github.com/yavosh/orcan
+    weight: 2.0
+  - url: https://github.com/yavosh/smtpbox
+    weight: 2.0
+  - url: https://github.com/yavosh/mrcrawley
+    weight: 2.0
 
 articles:
   - url: https://go.dev/blog/
     type: blog_index
+  - url: https://grafana.com/blog/how-i-write-http-services-in-go-after-13-years/
+    type: single_page
+    weight: 2.0
   - url: https://go.dev/doc/effective_go
     type: single_page
+    weight: 2.0
   - url: https://github.com/uber-go/guide
     type: markdown_repo
   - url: https://google.github.io/styleguide/go/

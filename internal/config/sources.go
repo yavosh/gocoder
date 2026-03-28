@@ -14,8 +14,13 @@ type Sources struct {
 
 type RepoSource struct {
 	URL    string  `yaml:"url"`
+	Dir    string  `yaml:"dir"`
 	Path   string  `yaml:"path"`
 	Weight float64 `yaml:"weight"`
+}
+
+func (r RepoSource) IsLocal() bool {
+	return r.Dir != ""
 }
 
 func (r RepoSource) EffectiveWeight() float64 {
