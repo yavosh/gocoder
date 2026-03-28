@@ -30,14 +30,15 @@ func TestCLIUnknownCommand(t *testing.T) {
 	}
 }
 
-func TestCLIPipelineStub(t *testing.T) {
-	cmd := exec.Command("go", "run", ".", "pipeline", "build")
+func TestCLIPipelineBuild(t *testing.T) {
+	outputDir := t.TempDir()
+	cmd := exec.Command("go", "run", ".", "pipeline", "build", "--dir", ".", "--output", outputDir, "--min-lines", "2")
 	cmd.Dir = "."
 	out, err := cmd.CombinedOutput()
-	if err == nil {
-		t.Fatal("expected non-zero exit for stub, got nil error")
+	if err != nil {
+		t.Fatalf("expected pipeline build to succeed, got: %v\noutput: %s", err, out)
 	}
-	if !strings.Contains(string(out), "not implemented") {
-		t.Fatalf("expected output to contain 'not implemented', got: %s", out)
+	if !strings.Contains(string(out), "Pipeline build complete") {
+		t.Fatalf("expected output to contain summary, got: %s", out)
 	}
 }

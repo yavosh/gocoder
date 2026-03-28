@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"os"
+
+	"github.com/yavosh/gocoder/internal/pipeline"
 )
 
 func main() {
@@ -36,9 +40,43 @@ func printUsage() {
 	fmt.Fprintln(os.Stderr, "  serve             Start model routing proxy")
 }
 
-func runPipeline(_ []string) {
-	fmt.Fprintln(os.Stderr, "pipeline: not implemented")
-	os.Exit(1)
+func runPipeline(args []string) {
+	if len(args) < 1 || args[0] != "build" {
+		fmt.Fprintln(os.Stderr, "Usage: gocoder pipeline build [flags]")
+		os.Exit(1)
+	}
+
+	fs := flag.NewFlagSet("pipeline", flag.ExitOnError)
+	dir := fs.String("dir", ".", "Input directory containing Go source files")
+	output := fs.String("output", "data/output", "Output directory for JSONL files")
+	minLines := fs.Int("min-lines", 3, "Minimum function body lines")
+	fimRatio := fs.Float64("fim-ratio", 0.4, "Fraction of examples formatted as FIM")
+	seed := fs.Int64("seed", 42, "Random seed for reproducibility")
+	evalSplit := fs.Float64("eval-split", 0.1, "Fraction of examples for eval set")
+	fs.Parse(args[1:])
+
+	if err := os.MkdirAll(*output, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "creating output dir: %v\n", err)
+		os.Exit(1)
+	}
+
+	result, err := pipeline.BuildFromDir(context.Background(), *dir, *output, pipeline.BuildOptions{
+		MinLines:  *minLines,
+		FIMRatio:  *fimRatio,
+		Seed:      *seed,
+		EvalSplit: *evalSplit,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "pipeline build: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Pipeline build complete:\n")
+	fmt.Printf("  Total examples: %d\n", result.TotalExamples)
+	fmt.Printf("  Train:          %d\n", result.TrainExamples)
+	fmt.Printf("  Eval:           %d\n", result.EvalExamples)
+	fmt.Printf("  FIM:            %d\n", result.FIMExamples)
+	fmt.Printf("  Instruction:    %d\n", result.InstrExamples)
 }
 
 func runEval(_ []string) {
