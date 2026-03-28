@@ -1,0 +1,24 @@
+listen: :8080
+ollama: http://localhost:11434
+
+models:
+  autocomplete:
+    model: qwen3:30b-a3b
+  codegen:
+    model: go-nemotron
+  reasoning:
+    model: qwen3.5:27b
+  frontier:
+    model: kimi-k2.5
+
+routing:
+  - match: { path: "/v1/completions" }
+    model: autocomplete
+  - match: { model: "go-*" }
+    model: codegen
+  - match: { model: "reason" }
+    model: reasoning
+  - match: { model: "frontier" }
+    model: frontier
+  - match: { default: true }
+    model: codegen
