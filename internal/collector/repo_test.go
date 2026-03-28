@@ -10,6 +10,45 @@ import (
 	"github.com/yavosh/gocoder/internal/config"
 )
 
+func TestResolveLocalRepo(t *testing.T) {
+	// Create a local dir with a Go file
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n"), 0o644)
+
+	src := config.RepoSource{
+		Dir:    dir,
+		Weight: 2.0,
+	}
+
+	resolved, err := collector.ResolveRepo(context.Background(), src, t.TempDir())
+	if err != nil {
+		t.Fatalf("ResolveRepo: %v", err)
+	}
+	if resolved != dir {
+		t.Errorf("expected %s, got %s", dir, resolved)
+	}
+}
+
+func TestResolveLocalRepoWithPath(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "sub")
+	os.MkdirAll(sub, 0o755)
+	os.WriteFile(filepath.Join(sub, "lib.go"), []byte("package lib\n"), 0o644)
+
+	src := config.RepoSource{
+		Dir:  dir,
+		Path: "sub",
+	}
+
+	resolved, err := collector.ResolveRepo(context.Background(), src, t.TempDir())
+	if err != nil {
+		t.Fatalf("ResolveRepo: %v", err)
+	}
+	if resolved != sub {
+		t.Errorf("expected %s, got %s", sub, resolved)
+	}
+}
+
 func TestCloneRepo(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")

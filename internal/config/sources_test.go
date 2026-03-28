@@ -54,6 +54,37 @@ articles:
 	}
 }
 
+func TestParseSourcesLocalDir(t *testing.T) {
+	dir := t.TempDir()
+	yamlContent := `repos:
+  - url: https://github.com/golang/go
+  - dir: /home/user/projects/myrepo
+    weight: 2.0
+`
+	path := filepath.Join(dir, "sources.yaml")
+	if err := os.WriteFile(path, []byte(yamlContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := config.ParseSources(path)
+	if err != nil {
+		t.Fatalf("ParseSources: %v", err)
+	}
+
+	if len(cfg.Repos) != 2 {
+		t.Fatalf("expected 2 repos, got %d", len(cfg.Repos))
+	}
+	if cfg.Repos[0].IsLocal() {
+		t.Error("expected remote repo to not be local")
+	}
+	if !cfg.Repos[1].IsLocal() {
+		t.Error("expected local repo to be local")
+	}
+	if cfg.Repos[1].Dir != "/home/user/projects/myrepo" {
+		t.Errorf("expected dir '/home/user/projects/myrepo', got %q", cfg.Repos[1].Dir)
+	}
+}
+
 func TestParseSourcesDefaultWeight(t *testing.T) {
 	dir := t.TempDir()
 	yamlContent := `repos:
