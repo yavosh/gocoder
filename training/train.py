@@ -6,14 +6,12 @@ Usage:
 """
 import argparse
 import json
-import sys
+import os
 
 import torch
 import yaml
 from datasets import Dataset
-from peft import LoraConfig
-from transformers import AutoTokenizer, TrainingArguments
-from trl import SFTTrainer
+from trl import SFTConfig, SFTTrainer
 from unsloth import FastLanguageModel
 
 
@@ -35,9 +33,7 @@ def load_jsonl(path: str) -> list[dict]:
 def format_example(example: dict) -> str:
     """Convert a training example to a single text string."""
     if example.get("text"):
-        # FIM format — already a single string
         return example["text"]
-    # Instruction format
     instruction = example.get("instruction", "")
     output = example.get("output", "")
     return f"### Instruction:\n{instruction}\n\n### Response:\n{output}"
@@ -62,8 +58,8 @@ def main():
 
     model, tokenizer = FastLanguageModel.from_pretrained(
         model_name=model_cfg["name"],
-        max_seq_length=model_cfg["max_seq_length"],
-        load_in_4bit=model_cfg["load_in_4bit"],
+        max_seq_length=int(model_cfg["max_seq_length"]),
+        load_in_4bit=bool(model_cfg["load_in_4bit"]),
     )
 
     # Print model architecture for LoRA target verification
@@ -73,7 +69,6 @@ def main():
             print(f"  {name}")
     print("=== End Modules ===\n")
 
-    # Log VRAM usage
     if torch.cuda.is_available():
         allocated = torch.cuda.memory_allocated() / 1024**3
         reserved = torch.cuda.memory_reserved() / 1024**3
@@ -83,16 +78,16 @@ def main():
         print("Dry run complete. Exiting.")
         return
 
-    # Configure LoRA
+    # Configure LoRA via unsloth
     model = FastLanguageModel.get_peft_model(
         model,
-        r=lora_cfg["r"],
-        lora_alpha=lora_cfg["alpha"],
+        r=int(lora_cfg["r"]),
+        lora_alpha=int(lora_cfg["alpha"]),
         target_modules=lora_cfg["target_modules"],
-        lora_dropout=lora_cfg["dropout"],
+        lora_dropout=float(lora_cfg["dropout"]),
     )
 
-    # Load dataset
+    # Load and format dataset
     print(f"Loading training data: {data_cfg['train']}")
     train_examples = load_jsonl(data_cfg["train"])
     print(f"  {len(train_examples)} training examples")
@@ -106,36 +101,40 @@ def main():
     train_dataset = Dataset.from_dict({"text": train_texts})
     eval_dataset = Dataset.from_dict({"text": eval_texts})
 
-    # Training arguments
-    training_args = TrainingArguments(
+    # SFTConfig replaces TrainingArguments in trl 0.24+
+    os.makedirs(args.output, exist_ok=True)
+    sft_config = SFTConfig(
         output_dir=args.output,
-        per_device_train_batch_size=train_cfg["batch_size"],
-        gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
-        warmup_steps=train_cfg["warmup_steps"],
-        num_train_epochs=train_cfg["epochs"],
-        learning_rate=train_cfg["learning_rate"],
-        bf16=train_cfg["bf16"],
-        logging_steps=train_cfg["logging_steps"],
+        per_device_train_batch_size=int(train_cfg["batch_size"]),
+        gradient_accumulation_steps=int(train_cfg["gradient_accumulation_steps"]),
+        warmup_steps=int(train_cfg["warmup_steps"]),
+        num_train_epochs=int(train_cfg["epochs"]),
+        learning_rate=float(train_cfg["learning_rate"]),
+        bf16=bool(train_cfg["bf16"]),
+        logging_steps=int(train_cfg["logging_steps"]),
         save_strategy="steps",
-        save_steps=train_cfg["save_steps"],
+        save_steps=int(train_cfg["save_steps"]),
         eval_strategy="steps",
-        eval_steps=train_cfg["save_steps"],
+        eval_steps=int(train_cfg["save_steps"]),
         report_to="none",
+        dataset_text_field="text",
+        max_length=int(model_cfg["max_seq_length"]),
+        packing=False,
+        gradient_checkpointing=False,
     )
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        args=training_args,
+        args=sft_config,
     )
 
     print("Starting training...")
     trainer.train()
     print("Training complete.")
 
-    # Save final model
     trainer.save_model(args.output)
     tokenizer.save_pretrained(args.output)
     print(f"Model saved to {args.output}")
