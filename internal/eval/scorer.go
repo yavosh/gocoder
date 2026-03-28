@@ -14,7 +14,7 @@ func prepareGoEnv(goSource string) (string, func(), error) {
 	}
 	cleanup := func() { os.RemoveAll(dir) }
 
-	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte(goSource), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "check.go"), []byte(goSource), 0o644); err != nil {
 		cleanup()
 		return "", nil, err
 	}
@@ -36,9 +36,7 @@ func Compiles(goSource string) bool {
 	}
 	defer cleanup()
 
-	// go build requires a main() in package main; use go vet which type-checks
-	// without requiring an entry point — it correctly rejects syntax/type errors.
-	cmd := exec.Command("go", "vet", "./...")
+	cmd := exec.Command("go", "build", "./...")
 	cmd.Dir = dir
 	return cmd.Run() == nil
 }
@@ -65,11 +63,13 @@ func ScoreResult(goSource string) Result {
 
 	r := Result{}
 
-	// go vet type-checks without requiring a main() entry point.
+	buildCmd := exec.Command("go", "build", "./...")
+	buildCmd.Dir = dir
+	r.Compiles = buildCmd.Run() == nil
+
 	vetCmd := exec.Command("go", "vet", "./...")
 	vetCmd.Dir = dir
 	r.VetClean = vetCmd.Run() == nil
-	r.Compiles = r.VetClean
 
 	score := 0.0
 	if r.Compiles {

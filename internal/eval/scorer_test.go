@@ -7,7 +7,7 @@ import (
 )
 
 func TestScoreCompiles(t *testing.T) {
-	good := `package main
+	good := `package check
 
 import "fmt"
 
@@ -15,7 +15,7 @@ func Hello() string {
 	return fmt.Sprintf("hello")
 }
 `
-	bad := `package main
+	bad := `package check
 
 func Hello() string {
 	return fmt.Sprintf("hello"
@@ -31,7 +31,7 @@ func Hello() string {
 }
 
 func TestScoreVet(t *testing.T) {
-	clean := `package main
+	clean := `package check
 
 import "fmt"
 
@@ -45,7 +45,7 @@ func Hello() {
 }
 
 func TestScoreResult(t *testing.T) {
-	good := `package main
+	good := `package check
 
 import "fmt"
 
