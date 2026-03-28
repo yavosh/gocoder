@@ -1,0 +1,15 @@
+category: package_design
+weight: 0.10
+prompts:
+  - id: pkg_internal
+    description: "Use internal package to restrict access"
+    prompt: "Sketch a Go module layout for a payments service where the database layer lives in internal/store and is not importable by external modules. Show the directory structure, the package declarations, and a public API package that wraps the internal store."
+  - id: pkg_dependency_direction
+    description: "Enforce unidirectional dependency between packages"
+    prompt: "You have Go packages: api, service, and store. Write the import rules so that api imports service but not store, and service imports store but not api. Give a concrete example showing how a type defined in store flows up to the api layer without creating a cycle."
+  - id: pkg_naming
+    description: "Apply idiomatic Go package naming"
+    prompt: "Refactor the following poorly named Go package and its exported types: package userManager with types UserManagerInterface, UserManagerImpl, and UserManagerConfig. Apply Go naming conventions — no stutter, no Manager suffix, proper package name — and rewrite the type and constructor signatures."
+  - id: pkg_option_pattern
+    description: "Functional options for package-level configuration"
+    prompt: "Write a Go package client that exports a Client struct configured via functional options (WithTimeout, WithRetries, WithBaseURL). The New constructor should apply defaults and then apply provided options. Show how a caller configures a client with a 10-second timeout and 3 retries."

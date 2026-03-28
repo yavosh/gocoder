@@ -1,0 +1,15 @@
+category: testing
+weight: 0.10
+prompts:
+  - id: test_table_driven
+    description: "Table-driven test with subtests"
+    prompt: "Write a table-driven Go test for a ParseDuration(s string) (time.Duration, error) function. Cover valid inputs, edge cases, and error cases. Use t.Run for subtests so failures are individually identified. Include a test for a zero-value input."
+  - id: test_httptest
+    description: "Test an HTTP handler using httptest"
+    prompt: "Write a Go test for an HTTP handler that accepts POST /users with a JSON body and returns 201 with the created user. Use httptest.NewRecorder and httptest.NewServer. Test both the success path and a 400 response for a malformed body."
+  - id: test_helper
+    description: "Write a reusable test helper with t.Helper"
+    prompt: "Write a Go test helper function assertJSONEqual(t *testing.T, expected, actual string) that compares two JSON strings semantically (key order-independent). Call t.Helper() so failure lines point to the caller. Show the helper used in two different test functions."
+  - id: test_stub
+    description: "Stub an interface in tests without a mock library"
+    prompt: "Write a Go test for a NotificationService that depends on an Emailer interface. Create a stub implementation that records sent emails. Test that the service sends the correct email subject and recipient when a user signs up. Do not use any mock generation library."

@@ -1,0 +1,15 @@
+category: idiom
+weight: 0.10
+prompts:
+  - id: idiom_naming
+    description: "Apply Go naming conventions to an idiomatic API"
+    prompt: "Rewrite the following non-idiomatic Go signatures to follow Go conventions: func GetHTTPClient() *HTTPClientImpl, func ParseJSONData(jsonData string) (JSONObject, error), type DBConnectionManager struct. Rename types, drop stuttering, and adjust method names following Effective Go and the Go style guide."
+  - id: idiom_zero_value
+    description: "Design a type whose zero value is ready to use"
+    prompt: "Write a Go SafeCounter type that is useful in its zero-value state (no constructor required) and is safe for concurrent use. The zero value must be directly usable in a struct field without initialisation. Show it embedded in another struct and incremented concurrently."
+  - id: idiom_comma_ok
+    description: "Use the comma-ok pattern for safe type assertion and map lookup"
+    prompt: "Write a Go function ProcessEvent(event interface{}) error that uses a type switch and comma-ok type assertions to handle three concrete event types. Also write LookupConfig(key string) (string, error) that uses comma-ok map lookup and returns a sentinel error for missing keys."
+  - id: idiom_defer_cleanup
+    description: "Use defer for deterministic resource cleanup"
+    prompt: "Write a Go function CopyFile(dst, src string) error that opens both files, defers their Close calls in the correct order, and handles the case where Close returns an error that should not silently shadow a write error. Show idiomatic multi-error handling with defer."

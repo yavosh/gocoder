@@ -1,0 +1,15 @@
+category: interfaces
+weight: 0.10
+prompts:
+  - id: iface_small_design
+    description: "Design a small, focused interface"
+    prompt: "Design a Go Storer interface for a key-value store used by a user service. The interface should only expose the operations the service actually needs (get, set, delete). Write the interface, a concrete in-memory implementation, and a function that accepts the interface."
+  - id: iface_io_pipeline
+    description: "Compose io.Reader and io.Writer for data transformation"
+    prompt: "Write a Go function CopyGzipped(dst io.Writer, src io.Reader) error that reads from src, gzip-compresses the data, and writes to dst. Use only the standard library. Show how to call it to compress a file to stdout."
+  - id: iface_satisfy_check
+    description: "Compile-time interface satisfaction assertion"
+    prompt: "Write a Go type FileCache that implements a Cache interface with Get, Set, and Delete methods. Add a compile-time assertion that FileCache satisfies Cache. Explain why this pattern is useful and where to place the assertion."
+  - id: iface_functional_option
+    description: "Accept an interface to decouple storage from business logic"
+    prompt: "Write a Go OrderService that depends on an OrderRepository interface (Save, FindByID). Implement a PostgresOrderRepository that satisfies the interface. Write a constructor for OrderService that accepts the interface, demonstrating dependency injection without a framework."
