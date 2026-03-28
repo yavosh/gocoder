@@ -1,0 +1,12 @@
+category: error_handling
+weight: 0.15
+prompts:
+  - id: err_wrap_basic
+    description: "Wrap an error with context using fmt.Errorf"
+    prompt: "Write a Go function that reads a config file and returns an error wrapped with context if the file cannot be read or parsed."
+  - id: err_sentinel
+    description: "Define and use sentinel errors"
+    prompt: "Write Go code that defines a sentinel error ErrNotFound and a function FindUser that returns it when a user is not found. Include a caller that checks for the error using errors.Is."
+  - id: err_as
+    description: "Use errors.As for typed error checking"
+    prompt: "Write a Go custom error type ValidationError with a Field string. Write a function Validate that returns it, and a caller that extracts the field name using errors.As."
