@@ -1,0 +1,36 @@
+model:
+  name: nvidia/Nemotron-Cascade-2-30B-A3B
+  max_seq_length: 4096
+  load_in_4bit: false  # bf16 for MoE (QLoRA has compatibility issues)
+
+lora:
+  r: 16
+  alpha: 16
+  # NOTE: These are placeholder targets for a standard transformer.
+  # MoE models have different layer names (e.g., experts.0.gate_proj).
+  # Run model.named_modules() on the loaded model to discover actual
+  # layer names before training. Unsloth may handle this automatically.
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+  dropout: 0.05
+
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  warmup_steps: 100
+  epochs: 2
+  learning_rate: 2e-4
+  bf16: true
+  save_steps: 500
+  logging_steps: 10
+
+dataset:
+  train: data/train.jsonl
+  eval: data/eval.jsonl
+  fim_ratio: 0.4
