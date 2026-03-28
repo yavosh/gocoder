@@ -1,0 +1,6 @@
+unsloth[cu124]>=2024.12
+trl>=0.12
+peft>=0.13
+transformers>=4.46
+datasets>=3.0
+pyyaml>=6.0
