@@ -54,8 +54,7 @@ func (c *Config) ResolveModel(requestModel string, requestPath string) string {
 		}
 		if route.Match.Model != "" {
 			pattern := route.Match.Model
-			if strings.HasSuffix(pattern, "*") {
-				prefix := strings.TrimSuffix(pattern, "*")
+			if prefix, ok := strings.CutSuffix(pattern, "*"); ok {
 				if strings.HasPrefix(requestModel, prefix) {
 					return c.Models[route.Target].Model
 				}
