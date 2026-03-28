@@ -1,0 +1,12 @@
+category: context_propagation
+weight: 0.10
+prompts:
+  - id: ctx_thread_through
+    description: "Thread context through a call stack"
+    prompt: "Write a Go HTTP handler that calls a service layer which calls a repository layer. Thread context.Context as the first parameter through all three layers. In the repository, use the context with a database query (sql.QueryContext). Show how cancellation from the HTTP layer propagates to the DB query."
+  - id: ctx_timeout
+    description: "Apply a per-request timeout with context"
+    prompt: "Write a Go function FetchReport(ctx context.Context, id string) (*Report, error) that calls two downstream services sequentially with a shared deadline. If either call exceeds the deadline, return a wrapped context error. Show how the caller sets a 5-second timeout."
+  - id: ctx_value_tracing
+    description: "Store and retrieve a trace ID via context"
+    prompt: "Write Go code that defines an unexported context key type and helper functions WithTraceID(ctx context.Context, id string) context.Context and TraceIDFromContext(ctx context.Context) (string, bool). Show middleware that injects a trace ID and a downstream function that reads it."

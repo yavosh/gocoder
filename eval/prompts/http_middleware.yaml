@@ -1,0 +1,12 @@
+category: http_middleware
+weight: 0.10
+prompts:
+  - id: mw_request_logging
+    description: "HTTP middleware that logs request details and latency"
+    prompt: "Write a Go HTTP middleware function that logs the method, path, response status code, and request duration for every request. Use slog for structured logging. The middleware must wrap any http.Handler and correctly capture the status code written by the inner handler."
+  - id: mw_auth_bearer
+    description: "Bearer token authentication middleware"
+    prompt: "Write a Go HTTP middleware that validates a Bearer token from the Authorization header. If the token is missing or invalid, return 401 with a JSON error body. On success, store the authenticated user ID in the request context and call the next handler."
+  - id: mw_rate_limit
+    description: "Per-IP rate limiting middleware using token bucket"
+    prompt: "Write a Go HTTP middleware that rate-limits requests per remote IP address using golang.org/x/time/rate. Maintain a map of per-IP limiters with a mutex. Return 429 with a Retry-After header when the limit is exceeded. Ensure the limiter map does not grow unboundedly."

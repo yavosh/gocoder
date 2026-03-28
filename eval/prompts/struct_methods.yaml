@@ -1,0 +1,15 @@
+category: struct_methods
+weight: 0.10
+prompts:
+  - id: sm_pointer_vs_value
+    description: "Choose correct receiver type for struct methods"
+    prompt: "Write a Go Counter struct with an Increment method (must use pointer receiver) and a Value method (can use value receiver). Add a String() method and explain in a comment why each receiver type was chosen. Show what happens if Increment mistakenly uses a value receiver."
+  - id: sm_embedding
+    description: "Use struct embedding for behaviour reuse"
+    prompt: "Write a Go BaseModel struct with ID, CreatedAt, and UpdatedAt fields and an IsNew() bool method. Embed BaseModel into a Product struct that adds its own fields. Show that Product inherits IsNew and that you can override it. Avoid promotion ambiguity."
+  - id: sm_constructor
+    description: "Write a constructor that validates and initialises a struct"
+    prompt: "Write a Go NewServer(addr string, opts ...Option) (*Server, error) constructor. Validate that addr is non-empty and a valid host:port. Apply functional options after validation. Return a typed error if validation fails. The Server must not be constructable with a literal outside the package."
+  - id: sm_stringer
+    description: "Implement fmt.Stringer and encoding interfaces"
+    prompt: "Write a Go Status type (an int-based enum) with constants StatusPending, StatusActive, StatusClosed. Implement fmt.Stringer, json.Marshaler, and json.Unmarshaler so the type serialises as a lowercase string (pending, active, closed). Include a test that round-trips through JSON."

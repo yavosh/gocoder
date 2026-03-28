@@ -1,0 +1,15 @@
+category: concurrency
+weight: 0.15
+prompts:
+  - id: conc_fan_out
+    description: "Fan out work across goroutines with WaitGroup"
+    prompt: "Write a Go function ProcessURLs(urls []string) []Result that fetches each URL concurrently using goroutines and sync.WaitGroup, collects results into a slice (safe from races), and returns when all fetches complete."
+  - id: conc_pipeline
+    description: "Build a goroutine pipeline with channels"
+    prompt: "Write a two-stage Go pipeline: a generator that emits integers on a channel, and a squarer that reads from that channel, squares each value, and sends results to an output channel. Both stages should respect context cancellation."
+  - id: conc_ctx_cancel
+    description: "Use context cancellation to stop a worker loop"
+    prompt: "Write a Go worker function that processes jobs from a channel in a loop. The worker must exit cleanly when its context is cancelled, without leaking goroutines. Show how the caller cancels the context and waits for the worker to finish."
+  - id: conc_semaphore
+    description: "Limit concurrency with a buffered channel semaphore"
+    prompt: "Write a Go function that downloads a list of files concurrently but limits concurrency to N parallel downloads at once. Use a buffered channel as a semaphore. Handle errors from individual downloads without cancelling others."
