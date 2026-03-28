@@ -18,8 +18,56 @@ func FetchArticle(ctx context.Context, src config.ArticleSource) (string, error)
 		return fetchURL(ctx, src.URL)
 	case "url_list":
 		return "", fmt.Errorf("url_list type requires FetchArticleList, not FetchArticle")
+	case "blog_index", "sitemap", "markdown_repo":
+		return "", fmt.Errorf("%s type returns multiple results; use FetchAllArticles", src.Type)
 	default:
 		return "", fmt.Errorf("unsupported article type: %s", src.Type)
+	}
+}
+
+// FetchAllArticles handles all article source types, returning one result per page/file.
+func FetchAllArticles(ctx context.Context, src config.ArticleSource) ([]string, error) {
+	switch src.Type {
+	case "single_page":
+		content, err := fetchURL(ctx, src.URL)
+		if err != nil {
+			return nil, err
+		}
+		return []string{content}, nil
+	case "url_list":
+		return FetchArticleList(ctx, src)
+	case "blog_index":
+		urls, err := DiscoverBlogURLs(ctx, src.URL)
+		if err != nil {
+			return nil, err
+		}
+		var results []string
+		for _, u := range urls {
+			content, err := fetchURL(ctx, u)
+			if err != nil {
+				continue // skip failed fetches
+			}
+			results = append(results, content)
+		}
+		return results, nil
+	case "markdown_repo":
+		return FetchMarkdownRepo(ctx, src)
+	case "sitemap":
+		urls, err := FetchSitemapURLs(ctx, src.URL+"/sitemap.xml")
+		if err != nil {
+			return nil, err
+		}
+		var results []string
+		for _, u := range urls {
+			content, err := fetchURL(ctx, u)
+			if err != nil {
+				continue // skip failed fetches
+			}
+			results = append(results, content)
+		}
+		return results, nil
+	default:
+		return nil, fmt.Errorf("unsupported article type: %s", src.Type)
 	}
 }
 
