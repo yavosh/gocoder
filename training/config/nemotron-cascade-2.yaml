@@ -18,7 +18,7 @@ lora:
     - gate_proj
     - up_proj
     - down_proj
-  dropout: 0.05
+  dropout: 0.0  # 0 enables unsloth fast patching
 
 training:
   batch_size: 4
