@@ -1,6 +1,12 @@
-unsloth[cu124]>=2024.12
-trl>=0.12
-peft>=0.13
-transformers>=4.46
-datasets>=3.0
+# Pinned versions — validated on GTX 1080 (local) and H100 (cloud)
+# trl 0.12.2 uses TrainingArguments (not SFTConfig). trl 0.24+ has breaking API changes.
+torch==2.4.0
+transformers==4.46.3
+trl==0.12.2
+peft==0.13.2
+datasets==3.0.0
+accelerate==1.2.1
+bitsandbytes==0.44.1
 pyyaml>=6.0
+sentencepiece
+protobuf
