@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""Fine-tune Nemotron-Cascade-2 with LoRA for Go code generation.
+"""Fine-tune a model with LoRA for Go code generation.
+
+Uses standard transformers + peft + trl. Tested with trl 0.12 + torch 2.4.
+Optional unsloth support for faster training on cloud GPUs.
 
 Usage:
     python training/train.py --config training/config/nemotron-cascade-2.yaml
+    python training/train.py --config training/config/tinyllama-test.yaml
 """
 import argparse
 import json
-import sys
+import os
 
 import torch
 import yaml
 from datasets import Dataset
-from peft import LoraConfig
-from transformers import AutoTokenizer, TrainingArguments
+from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
 from trl import SFTTrainer
-from unsloth import FastLanguageModel
 
 
 def load_config(path: str) -> dict:
@@ -33,14 +36,11 @@ def load_jsonl(path: str) -> list[dict]:
 
 
 def format_example(example: dict) -> str:
-    """Convert a training example to a single text string."""
     if example.get("text"):
-        # FIM format — already a single string
         return example["text"]
-    # Instruction format
-    instruction = example.get("instruction", "")
-    output = example.get("output", "")
-    return f"### Instruction:\n{instruction}\n\n### Response:\n{output}"
+    inst = example.get("instruction", "")
+    out = example.get("output", "")
+    return f"### Instruction:\n{inst}\n\n### Response:\n{out}"
 
 
 def main():
@@ -56,24 +56,30 @@ def main():
     train_cfg = cfg["training"]
     data_cfg = cfg["dataset"]
 
-    print(f"Loading model: {model_cfg['name']}")
+    # Load model
+    name = model_cfg["name"]
+    load_4bit = bool(model_cfg.get("load_in_4bit", False))
+    print(f"Loading model: {name}")
     print(f"  max_seq_length: {model_cfg['max_seq_length']}")
-    print(f"  load_in_4bit: {model_cfg['load_in_4bit']}")
+    print(f"  load_in_4bit: {load_4bit}")
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=model_cfg["name"],
-        max_seq_length=model_cfg["max_seq_length"],
-        load_in_4bit=model_cfg["load_in_4bit"],
+    model = AutoModelForCausalLM.from_pretrained(
+        name,
+        torch_dtype=torch.float16,
+        device_map="auto",
+        load_in_4bit=load_4bit,
     )
+    tokenizer = AutoTokenizer.from_pretrained(name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
-    # Print model architecture for LoRA target verification
+    # Print LoRA target modules found in model
     print("\n=== Model Modules (verify LoRA targets) ===")
-    for name, _ in model.named_modules():
-        if any(t in name for t in lora_cfg["target_modules"]):
-            print(f"  {name}")
+    for mod_name, _ in model.named_modules():
+        if any(t in mod_name for t in lora_cfg["target_modules"]):
+            print(f"  {mod_name}")
     print("=== End Modules ===\n")
 
-    # Log VRAM usage
     if torch.cuda.is_available():
         allocated = torch.cuda.memory_allocated() / 1024**3
         reserved = torch.cuda.memory_reserved() / 1024**3
@@ -83,14 +89,17 @@ def main():
         print("Dry run complete. Exiting.")
         return
 
-    # Configure LoRA
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=lora_cfg["r"],
-        lora_alpha=lora_cfg["alpha"],
+    # Apply LoRA
+    lora_config = LoraConfig(
+        r=int(lora_cfg["r"]),
+        lora_alpha=int(lora_cfg["alpha"]),
         target_modules=lora_cfg["target_modules"],
-        lora_dropout=lora_cfg["dropout"],
+        lora_dropout=float(lora_cfg["dropout"]),
+        bias="none",
+        task_type="CAUSAL_LM",
     )
+    model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
 
     # Load dataset
     print(f"Loading training data: {data_cfg['train']}")
@@ -107,20 +116,26 @@ def main():
     eval_dataset = Dataset.from_dict({"text": eval_texts})
 
     # Training arguments
+    use_bf16 = bool(train_cfg.get("bf16", False))
+    use_fp16 = not use_bf16
+
+    os.makedirs(args.output, exist_ok=True)
     training_args = TrainingArguments(
         output_dir=args.output,
-        per_device_train_batch_size=train_cfg["batch_size"],
-        gradient_accumulation_steps=train_cfg["gradient_accumulation_steps"],
-        warmup_steps=train_cfg["warmup_steps"],
-        num_train_epochs=train_cfg["epochs"],
-        learning_rate=train_cfg["learning_rate"],
-        bf16=train_cfg["bf16"],
-        logging_steps=train_cfg["logging_steps"],
+        per_device_train_batch_size=int(train_cfg["batch_size"]),
+        gradient_accumulation_steps=int(train_cfg["gradient_accumulation_steps"]),
+        warmup_steps=int(train_cfg["warmup_steps"]),
+        num_train_epochs=int(train_cfg["epochs"]),
+        learning_rate=float(train_cfg["learning_rate"]),
+        bf16=use_bf16,
+        fp16=use_fp16,
+        logging_steps=int(train_cfg["logging_steps"]),
         save_strategy="steps",
-        save_steps=train_cfg["save_steps"],
+        save_steps=int(train_cfg["save_steps"]),
         eval_strategy="steps",
-        eval_steps=train_cfg["save_steps"],
+        eval_steps=int(train_cfg["save_steps"]),
         report_to="none",
+        gradient_checkpointing=False,
     )
 
     trainer = SFTTrainer(
@@ -128,6 +143,9 @@ def main():
         tokenizer=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
+        dataset_text_field="text",
+        max_seq_length=int(model_cfg["max_seq_length"]),
+        packing=False,
         args=training_args,
     )
 
@@ -135,7 +153,6 @@ def main():
     trainer.train()
     print("Training complete.")
 
-    # Save final model
     trainer.save_model(args.output)
     tokenizer.save_pretrained(args.output)
     print(f"Model saved to {args.output}")
